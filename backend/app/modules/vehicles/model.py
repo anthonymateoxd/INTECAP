@@ -4,8 +4,10 @@ from decimal import Decimal
 from sqlalchemy import (
     BigInteger,
     Boolean,
+    CheckConstraint,
     DateTime,
     FetchedValue,
+    Index,
     Numeric,
     SmallInteger,
     String,
@@ -16,8 +18,32 @@ from sqlalchemy.orm import Mapped, mapped_column
 from app.database.base import Base
 
 
+
+
 class Vehicle(Base):
     __tablename__ = "vehicles"
+
+    __table_args__ = (
+        CheckConstraint(
+            "year >= 1900",
+            name="ck_vehicles_year",
+        ),
+        CheckConstraint(
+            "current_odometer_km >= 0",
+            name="ck_vehicles_odometer",
+        ),
+        CheckConstraint(
+            "tank_capacity_gal IS NULL OR tank_capacity_gal > 0",
+            name="ck_vehicles_tank_capacity",
+        ),
+        {
+            "comment": (
+                "Cilindraje/C.C. no se agregan todavía porque "
+                "falta confirmar si representan el mismo dato "
+                "o datos diferentes."
+            ),
+        },
+    )
 
     id: Mapped[int] = mapped_column(
         BigInteger,
@@ -69,6 +95,12 @@ class Vehicle(Base):
     tank_capacity_gal: Mapped[Decimal | None] = mapped_column(
         Numeric(8, 3),
         nullable=True,
+        comment=(
+            "PENDIENTE DE CONFIRMACIÓN: capacidad del tanque "
+            "en galones. Se deja nullable para soportar el "
+            "cálculo futuro de combustible restante sin "
+            "inventar valores."
+        ),
     )
 
     is_active: Mapped[bool] = mapped_column(
@@ -89,3 +121,16 @@ class Vehicle(Base):
         server_default=func.now(),
         server_onupdate=FetchedValue(),
     )
+
+
+Index(
+    "uq_vehicles_inventory_code_ci",
+    func.lower(Vehicle.inventory_code),
+    unique=True,
+)
+
+Index(
+    "uq_vehicles_license_plate_ci",
+    func.lower(Vehicle.license_plate),
+    unique=True,
+)

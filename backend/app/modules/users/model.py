@@ -6,11 +6,13 @@ from sqlalchemy import (
     DateTime,
     FetchedValue,
     ForeignKey,
+    Index,
     SmallInteger,
     String,
     Text,
+    UniqueConstraint,
     func,
-) 
+)
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database.base import Base
@@ -18,6 +20,17 @@ from app.database.base import Base
 
 class Role(Base):
     __tablename__ = "roles"
+
+    __table_args__ = (
+        UniqueConstraint(
+            "code",
+            name="roles_code_key",
+        ),
+        UniqueConstraint(
+            "name",
+            name="roles_name_key",
+        ),
+    )
 
     id: Mapped[int] = mapped_column(
         SmallInteger,
@@ -57,7 +70,12 @@ class User(Base):
 
     role_id: Mapped[int] = mapped_column(
         SmallInteger,
-        ForeignKey("roles.id"),
+        ForeignKey(
+            "roles.id",
+            onupdate="CASCADE",
+            ondelete="RESTRICT",
+            name="fk_users_role",
+        ),
         nullable=False,
     )
 
@@ -113,3 +131,16 @@ class User(Base):
     role: Mapped["Role"] = relationship(
         back_populates="users",
     )
+
+
+
+Index(
+    "idx_users_role_id",
+    User.role_id,
+)
+
+Index(
+    "uq_users_institutional_email_ci",
+    func.lower(User.institutional_email),
+    unique=True,
+)
